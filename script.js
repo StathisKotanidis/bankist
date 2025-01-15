@@ -62,9 +62,10 @@ const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
 
 //152-Creating DOM Elements
-const displayMovements = function (movements) {
+const displayMovements = function (movements, sort = false) {
+  const movs = sort ? movements.slice().sort((a, b) => a - b) : movements;
   containerMovements.innerHTML = '';
-  movements.forEach((mov, i) => {
+  movs.forEach((mov, i) => {
     const movement = `<div class="movements__row">
           <div class="movements__type movements__type--${
             mov >= 0 ? 'deposit' : 'withdrawal'
@@ -211,6 +212,15 @@ btnClose.addEventListener('click', e => {
     inputClosePin.value = '';
     inputCloseUsername.value = '';
   }
+});
+
+//170--Implementing Sorting
+
+let sorted = false; //state
+btnSort.addEventListener('click', e => {
+  e.preventDefault();
+  displayMovements(currentAccount.movements, !sorted);
+  sorted = !sorted;
 });
 
 /////////////////////////////////////////////////
