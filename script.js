@@ -53,14 +53,15 @@ const btnLoan = document.querySelector('.form__btn--loan');
 const btnClose = document.querySelector('.form__btn--close');
 const btnSort = document.querySelector('.btn--sort');
 
-const inputLoginUsername = document.querySelector('.login__input--user');
-const inputLoginPin = document.querySelector('.login__input--pin');
+let inputLoginUsername = document.querySelector('.login__input--user');
+let inputLoginPin = document.querySelector('.login__input--pin');
 const inputTransferTo = document.querySelector('.form__input--to');
 const inputTransferAmount = document.querySelector('.form__input--amount');
 const inputLoanAmount = document.querySelector('.form__input--loan-amount');
 const inputCloseUsername = document.querySelector('.form__input--user');
 const inputClosePin = document.querySelector('.form__input--pin');
 
+//152-Creating DOM Elements
 const displayMovements = function (movements) {
   containerMovements.innerHTML = '';
   movements.forEach((mov, i) => {
@@ -75,7 +76,142 @@ const displayMovements = function (movements) {
   });
 };
 
-displayMovements(account1.movements);
+//156--Computing Usernames
+
+const createUsername = str => {
+  return str
+    .toLowerCase() //steven thomas williams
+    .split(' ') // [steven, thomas, williams]
+    .map(name => name[0]) // [s,t,w]
+    .join(''); //stw
+};
+
+//Create a username for each account
+accounts.forEach(account => {
+  account.username = createUsername(account.owner);
+});
+
+//158--Reduce Method, calculating the balance value
+const calculateBalance = acc => {
+  const balance = acc.movements.reduce((mov, cur) => mov + cur, 0);
+  labelBalance.textContent = `${balance}€`;
+
+  acc.balance = balance;
+  return balance;
+};
+
+//160--The magic of chaining methods--Calculating IN,OUT and Interest
+
+const calculateInsAndOuts = acc => {
+  const ins = [];
+  const outs = [];
+  acc.movements.filter(amount =>
+    amount >= 0 ? ins.push(amount) : outs.push(amount)
+  );
+  const positiveAmount = ins.reduce((acc, cur) => acc + cur, 0);
+  const negativeAmount = outs.reduce((acc, cur) => acc + cur, 0);
+
+  labelSumIn.textContent = positiveAmount;
+  labelSumOut.textContent = Math.abs(negativeAmount);
+
+  const interest = acc.movements
+    .filter(amount => amount > 0)
+    .map(amount => (amount * acc.interestRate) / 100)
+    .filter((int, i, arr) => {
+      return int >= 1;
+    })
+    .reduce((acc, cur) => acc + cur, 0);
+
+  labelSumInterest.textContent = interest;
+};
+
+const updateUI = acc => {
+  displayMovements(acc.movements);
+  calculateBalance(acc);
+  calculateInsAndOuts(acc);
+};
+
+//163--Implementing Login
+
+let currentAccount;
+btnLogin.addEventListener('click', e => {
+  //Prevent form from submitting
+  e.preventDefault();
+  currentAccount = accounts.find(
+    acc => acc.username === inputLoginUsername.value
+  );
+
+  if (currentAccount?.pin === Number(inputLoginPin.value)) {
+    //Display UI and message
+    labelWelcome.textContent = `Welcome back, ${currentAccount.owner
+      .split(' ')
+      .at(0)}`;
+    containerApp.style.opacity = 100;
+
+    updateUI(currentAccount);
+
+    //Clearing user and pin inputs
+    inputLoginUsername.value = ' ';
+    inputLoginPin.value = ' ';
+    inputLoginPin.blur(); //looses focus
+  }
+});
+
+//164--Implementing Transfers
+let receiverAccount;
+btnTransfer.addEventListener('click', e => {
+  e.preventDefault();
+
+  const amount = Number(inputTransferAmount.value);
+  receiverAccount = accounts.find(
+    acc => acc.username === inputTransferTo.value
+  );
+
+  if (
+    amount > 0 &&
+    receiverAccount &&
+    currentAccount.balance >= amount &&
+    receiverAccount?.username !== currentAccount.username
+  ) {
+    currentAccount.movements.push(inputTransferAmount.value * -1);
+    receiverAccount.movements.push(inputTransferAmount.value);
+    updateUI(currentAccount);
+  }
+
+  inputTransferTo.value = '';
+  inputTransferAmount.value = '';
+});
+
+//167--Implementing Loans
+btnLoan.addEventListener('click', e => {
+  e.preventDefault();
+  const amount = Number(inputLoanAmount.value);
+
+  if (amount > 0 && currentAccount.movements.some(mov => mov >= amount * 0.1)) {
+    currentAccount.movements.push(amount);
+    updateUI(currentAccount);
+  }
+
+  inputLoanAmount.value = '';
+});
+
+//165--Implementing Close Account
+btnClose.addEventListener('click', e => {
+  e.preventDefault();
+  if (
+    currentAccount.username === inputCloseUsername.value &&
+    currentAccount.pin === Number(inputClosePin.value)
+  ) {
+    const index = accounts.findIndex(
+      acc => acc.username === currentAccount.username
+    );
+
+    accounts.splice(index, 1);
+    containerApp.style.opacity = 0;
+    inputClosePin.value = '';
+    inputCloseUsername.value = '';
+  }
+});
 
 /////////////////////////////////////////////////
 /////////////////////////////////////////////////
