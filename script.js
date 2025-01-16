@@ -118,10 +118,6 @@ const displayMovements = function (acc, sort = false) {
     movementDate: acc.movementsDates.at(i),
   }));
 
-  // const movs = sort
-  //   ? acc.movements.slice().sort((a, b) => a - b)
-  //   : acc.movements;
-
   if (sort) combinedMovsAndDates.sort((a, b) => a.movement - b.movement);
 
   combinedMovsAndDates.forEach((obj, i) => {
@@ -200,21 +196,29 @@ const updateUI = acc => {
 };
 
 //163--Implementing Login
+const startLogOutTimer = () => {
+  let time = 1000;
+  const tick = () => {
+    const min = String(Math.trunc(time / 60)).padStart(2, 0);
+    const sec = String(time % 60).padStart(2, 0);
+    labelTimer.textContent = `${min}:${sec}`;
 
-let currentAccount;
+    if (time === 0) {
+      clearInterval(timer);
+      labelWelcome.textContent = 'Log in to get started';
+      containerApp.style.opacity = 0;
+    }
 
-//FAKE ALWAYS LOGGED IN
-currentAccount = account1;
-updateUI(currentAccount);
-containerApp.style.opacity = 100;
+    time--;
+  };
+  tick();
+  const timer = setInterval(tick, 1000);
+  return timer;
+};
 
-const now = new Date();
-const day = `${now.getDate()}`.padStart(2, 0);
-const month = `${now.getMonth() + 1}`.padStart(2, 0);
-const year = now.getFullYear();
-const hour = `${now.getHours()}`.padStart(2, 0);
-const min = `${now.getMinutes()}`.padStart(2, 0);
-labelDate.textContent = `${day}/${month}/${year}, ${hour}:${min}`;
+let currentAccount, timer;
+
+// const locale = navigator.language;
 
 btnLogin.addEventListener('click', e => {
   //Prevent form from submitting
@@ -222,20 +226,39 @@ btnLogin.addEventListener('click', e => {
   currentAccount = accounts.find(
     acc => acc.username === inputLoginUsername.value
   );
+  console.log(currentAccount);
 
-  if (currentAccount?.pin === Number(inputLoginPin.value)) {
+  if (currentAccount?.pin === +inputLoginPin.value) {
     //Display UI and message
     labelWelcome.textContent = `Welcome back, ${currentAccount.owner
       .split(' ')
       .at(0)}`;
-    containerApp.style.opacity = 100;
 
-    updateUI(currentAccount);
+    containerApp.style.opacity = 100;
+    const now = new Date();
+    const options = {
+      hour: 'numeric',
+      minute: 'numeric',
+      day: 'numeric',
+      month: 'numeric',
+      year: 'numeric',
+      // weekday: 'long',
+    };
+    labelDate.textContent = new Intl.DateTimeFormat(
+      currentAccount.locale,
+      options
+    ).format(now);
+
+    //Timer
+    if (timer) clearInterval(timer);
+    timer = startLogOutTimer();
 
     //Clearing user and pin inputs
-    inputLoginUsername.value = ' ';
-    inputLoginPin.value = ' ';
+    inputLoginUsername.value = '';
+    inputLoginPin.value = '';
     inputLoginPin.blur(); //looses focus
+
+    updateUI(currentAccount);
   }
 });
 
@@ -264,6 +287,10 @@ btnTransfer.addEventListener('click', e => {
 
   inputTransferTo.value = '';
   inputTransferAmount.value = '';
+
+  //Reset Timer
+  clearInterval(timer);
+  timer = startLogOutTimer();
 });
 
 //167--Implementing Loans
@@ -272,9 +299,14 @@ btnLoan.addEventListener('click', e => {
   const amount = Math.floor(Number(inputLoanAmount.value));
 
   if (amount > 0 && currentAccount.movements.some(mov => mov >= amount * 0.1)) {
-    currentAccount.movements.push(amount);
-    currentAccount.movementsDates.push(new Date());
-    updateUI(currentAccount);
+    setTimeout(() => {
+      currentAccount.movements.push(amount);
+      currentAccount.movementsDates.push(new Date());
+      updateUI(currentAccount);
+      //Reset Timer
+      clearInterval(timer);
+      timer = startLogOutTimer();
+    }, 3000);
   }
 
   inputLoanAmount.value = '';
